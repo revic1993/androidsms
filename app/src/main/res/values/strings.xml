@@ -6,4 +6,5 @@
     <string name="mobile_connected">mobile connected.</string>
     <string name="connection_error">Unable to load content. Check your network connection.</string>
     <string name="title_activity_contact">Contacts</string>
+    <string name="title_activity_verify_sms">VerifySms</string>
 </resources>

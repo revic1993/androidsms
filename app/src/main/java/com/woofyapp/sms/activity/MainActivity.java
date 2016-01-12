@@ -1,22 +1,31 @@
 package com.woofyapp.sms.activity;
 
-import android.content.Context;
-import android.content.Intent;
+import android.app.ProgressDialog;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.util.Log;
 import android.view.View;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.woofyapp.sms.R;
+import com.woofyapp.sms.application.Constants;
+import com.woofyapp.sms.application.SmsApplication;
 import com.woofyapp.sms.service.NetworkService;
+
+import org.json.JSONObject;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -24,6 +33,7 @@ public class MainActivity extends AppCompatActivity {
     private EditText phoneNumber;
     private Button okButton;
     private  boolean okEnabled = false;
+    private SmsApplication app;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -33,9 +43,10 @@ public class MainActivity extends AppCompatActivity {
 
         phoneNumber = (EditText) findViewById(R.id.phoneNumber);
         okButton = (Button) findViewById(R.id.verifyButton);
-
+        app =  SmsApplication.getInstance();
 
         NetworkService  networkService = new NetworkService();
+
         if(!networkService.isConnected(MainActivity.this)){
             Toast.makeText(MainActivity.this,R.string.no_connection,Toast.LENGTH_LONG).show();
             phoneNumber.setFocusable(false);
@@ -43,14 +54,10 @@ public class MainActivity extends AppCompatActivity {
         }else{
             phoneNumber.addTextChangedListener(new TextWatcher() {
                 @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-                }
+                public void beforeTextChanged(CharSequence s, int start, int count, int after){}
 
                 @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-                }
+                public void onTextChanged(CharSequence s, int start, int before, int count){}
 
                 @Override
                 public void afterTextChanged(Editable s) {
@@ -69,35 +76,41 @@ public class MainActivity extends AppCompatActivity {
             okButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    Intent intent = new Intent(MainActivity.this,ContactActivity.class);
-                    startActivity(intent);
-                    finish();
+                    app.addToRequestQueue(createUser(),Constants.CREATE_USER_TAG);
                 }
             });
         }
 
 
+
     }
+    private JsonObjectRequest createUser(){
+        final ProgressDialog pDialog = new ProgressDialog(this);
+        pDialog.setMessage("Loading...");
+        pDialog.show();
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_main, menu);
-        return true;
-    }
+        Map<String, String> params = new HashMap<String, String>();
+        params.put("number", phoneNumber.getText().toString());
+        params.put("token", Constants.TOKEN);
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+        JsonObjectRequest jsonObjReq = new JsonObjectRequest(Request.Method.POST,
+                Constants.CREATE_USER_URL, new JSONObject(params),
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.i(Constants.CREATE_USER_TAG, response.toString());
+                        pDialog.hide();
+                    }
+                }, new Response.ErrorListener() {
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
-        }
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Log.e(Constants.TAG, "Error: " + error.getMessage());
+                pDialog.hide();
+            }
+        });
 
-        return super.onOptionsItemSelected(item);
+        return jsonObjReq;
+
     }
 }
